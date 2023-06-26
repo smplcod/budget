@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Budget Calculator</title>
+    <style>
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th,
+      td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      input[type="number"] {
+        width: 60px;
+        border: none;
+        outline: none;
+      }
+      input[type="text"] {
+        width: 100%;
+        border: none;
+        outline: none;
+      }
+      .total-label {
+        font-weight: bold;
+      }
+      .total {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Name</th>
+          <th>Price</th>
+          <th>Quantity</th>
+          <th>Total</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="budgetTableBody">
+        <!-- Load data from LocalStorage -->
+      </tbody>
+    </table>
+    <button onclick="addRow()" style="float: left">Add Row</button>
+    <br />
+    <br />
+    <h2>Results:</h2>
+    <div id="categoryTotals"></div>
+    <p class="total-label">Total: <span id="grandTotal">0</span></p>
+
+    <script>
+      // Load data from LocalStorage on page load
+      window.addEventListener("load", function () {
+        loadBudgetData();
+      });
+
+      function calculateSum(input) {
+        var row = input.parentNode.parentNode;
+        var price = row.querySelector(".price").value;
+        var quantity = row.querySelector(".quantity").value;
+        var total = price * quantity;
+        row.querySelector(".total").value = total;
+
+        updateCategoryTotals();
+        updateGrandTotal();
+
+        // Save data to LocalStorage on input change
+        saveBudgetData();
+      }
+
+      function updateCategoryTotals() {
+        var categoryTotals = {};
+        var rows = document.querySelectorAll("#budgetTableBody tr");
+
+        rows.forEach(function (row) {
+          var category = row.querySelector(".category").value;
+          var total = parseFloat(row.querySelector(".total").value);
+
+          if (category in categoryTotals) {
+            categoryTotals[category] += total;
+          } else {
+            categoryTotals[category] = total;
+          }
+        });
+
+        var categoryTotalsContainer = document.getElementById("categoryTotals");
+        categoryTotalsContainer.innerHTML = "";
+
+        for (var category in categoryTotals) {
+          var categoryTotal = categoryTotals[category];
+
+          if (categoryTotal !== 0) {
+            var categoryTotalElement = document.createElement("p");
+            categoryTotalElement.textContent = category + ": " + categoryTotal;
+            categoryTotalsContainer.appendChild(categoryTotalElement);
+          }
+        }
+      }
+
+      function updateGrandTotal() {
+        var grandTotal = 0;
+        var totals = document.querySelectorAll(".total");
+
+        totals.forEach(function (total) {
+          grandTotal += parseFloat(total.value);
+        });
+
+        var grandTotalElement = document.getElementById("grandTotal");
+        grandTotalElement.textContent = grandTotal;
+      }
+
+      function addRow() {
+        var tableBody = document.getElementById("budgetTableBody");
+        var newRow = document.createElement("tr");
+        newRow.innerHTML = `
+        <td><input type="text" class="category" oninput="calculateSum(this)"></td>
+        <td><input type="text" class="name" oninput="calculateSum(this)"></td>
+        <td><input type="number" class="price" value="0" oninput="calculateSum(this)"></td>
+        <td><input type="number" class="quantity" value="1" oninput="calculateSum(this)"></td>
+        <td><input type="text" class="total" readonly></td>
+        <td><button onclick="deleteRow(this)">Delete</button></td>
+      `;
+        tableBody.appendChild(newRow);
+
+        // Move focus to the category input field in the new row
+        newRow.querySelector(".category").focus();
+
+        // Save data to LocalStorage on row addition
+        saveBudgetData();
+      }
+
+      function deleteRow(button) {
+        var row = button.parentNode.parentNode;
+        row.parentNode.removeChild(row);
+
+        updateCategoryTotals();
+        updateGrandTotal();
+
+        // Save data to LocalStorage on row deletion
+        saveBudgetData();
+      }
+
+      function loadBudgetData() {
+        var budgetData = JSON.parse(localStorage.getItem("budgetData")) || [];
+
+        var tableBody = document.getElementById("budgetTableBody");
+        tableBody.innerHTML = "";
+
+        for (var i = 0; i < budgetData.length; i++) {
+          var row = budgetData[i];
+          var newRow = document.createElement("tr");
+          newRow.innerHTML = `
+          <td><input type="text" class="category" value="${row.category}" oninput="calculateSum(this)"></td>
+          <td><input type="text" class="name" value="${row.name}" oninput="calculateSum(this)"></td>
+          <td><input type="number" class="price" value="${row.price}" oninput="calculateSum(this)"></td>
+          <td><input type="number" class="quantity" value="${row.quantity}" oninput="calculateSum(this)"></td>
+          <td><input type="text" class="total" value="${row.total}" readonly></td>
+          <td><button onclick="deleteRow(this)">Delete</button></td>
+        `;
+          tableBody.appendChild(newRow);
+        }
+
+        updateCategoryTotals();
+        updateGrandTotal();
+      }
+
+      function saveBudgetData() {
+        var rows = document.querySelectorAll("#budgetTableBody tr");
+        var budgetData = [];
+
+        rows.forEach(function (row) {
+          var category = row.querySelector(".category").value;
+          var name = row.querySelector(".name").value;
+          var price = row.querySelector(".price").value;
+          var quantity = row.querySelector(".quantity").value;
+          var total = row.querySelector(".total").value;
+
+          budgetData.push({
+            category: category,
+            name: name,
+            price: price,
+            quantity: quantity,
+            total: total,
+          });
+        });
+
+        localStorage.setItem("budgetData", JSON.stringify(budgetData));
+      }
+
+      function handleKeyPress(event) {
+        if (event.keyCode === 13) {
+          event.preventDefault();
+          addRow();
+        }
+      }
+
+      document.addEventListener("keydown", handleKeyPress);
+    </script>
+  </body>
+</html>
